@@ -1,11 +1,41 @@
-import urllib.request, json, pprint, re
+import urllib.request, urllib.error, json, pprint, re, time
+from mysql.connector import connect, Error
 
-url = "https://www.reddit.com/r/adoptme.json"
-response = urllib.request.urlopen(url)
-data = json.loads(response.read())
+print("Starting Scraper")
 
-for i in data['data']['children']:
-    print("This is Title: {}\nThis is Thimbnail: {}\n".format(i['data']['title'], i['data']['thumbnail']))
+url = "https://www.reddit.com/r/funnypictures.json"
+
+
+def  my_data(url):
+    
+    print("downloading {}".format(url))
+
+    try:
+        url_response = urllib.request.urlopen(url)
+        return url_response.read()
+    except:
+        print("There was an error, trying again")
+
+    time.sleep(5)
+    return my_data(url)
+
+
+try:
+    connection =  connect(
+        host="localhost",
+        user="root",
+        password="ricky1212",
+	    database="Scraper"
+    )
+except Error as e:
+    print(e)
+
+url_data = json.loads(my_data(url))
+
+
+for i in url_data['data']['children']:
+
+    print("This is the Title: {}\nThis is the Thimbnail: {}\n".format(i['data']['title'], i['data']['thumbnail']))
     
     try:
         url2 = urllib.request.urlopen(i['data']['thumbnail'])
@@ -18,7 +48,12 @@ for i in data['data']['children']:
     file_name = "images/{}.jpg".format(file_name[0:16])
     f = open(file_name, "wb")
     f.write(img)
+    f.close()
 
+    insert = connection.cursor()
+    query = "INSERT INTO images (`Title`,`Reddit_id`) VALUES (%s, %s)"
+    insert.execute(query, (i['data']['title'], i['data']['thumbnail']))
+    connection.commit()
 
    
 
